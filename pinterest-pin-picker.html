@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pin Picker — sketch-subjects</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:        #0c0b09;
+    --surface:   #141210;
+    --border:    #2a2520;
+    --amber:     #c8822a;
+    --amber-dim: #7a4e18;
+    --red:       #8b2a1a;
+    --cream:     #d6c9a8;
+    --muted:     #6b5f4a;
+    --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--cream);
+    font-family: 'Space Mono', monospace;
+    min-height: 100vh;
+    padding: 2rem 1.5rem 4rem;
+    position: relative;
+    overflow-x: hidden;
+  }
+
+  /* grain overlay */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: var(--grain);
+    background-size: 200px 200px;
+    pointer-events: none;
+    z-index: 999;
+    opacity: 1;
+  }
+
+  /* safelight glow top-left */
+  body::after {
+    content: '';
+    position: fixed;
+    top: -120px; left: -120px;
+    width: 400px; height: 400px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(139,42,26,0.12) 0%, transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .wrap {
+    max-width: 760px;
+    margin: 0 auto;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* ── header ── */
+  header {
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 1.5rem;
+    margin-bottom: 2.5rem;
+  }
+  .logo-row {
+    display: flex;
+    align-items: baseline;
+    gap: 0.75rem;
+    margin-bottom: 0.35rem;
+  }
+  .logo-icon {
+    font-size: 1.1rem;
+    color: var(--amber);
+    letter-spacing: 0.1em;
+  }
+  h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: 2rem;
+    font-weight: 400;
+    letter-spacing: -0.01em;
+    color: var(--cream);
+  }
+  h1 em {
+    color: var(--amber);
+    font-style: italic;
+  }
+  .subtitle {
+    font-size: 0.7rem;
+    color: var(--muted);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  /* ── step cards ── */
+  .step {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    padding: 1.75rem 2rem;
+    margin-bottom: 1.5rem;
+    position: relative;
+  }
+  .step-num {
+    position: absolute;
+    top: -1px; left: -1px;
+    background: var(--amber);
+    color: var(--bg);
+    font-size: 0.6rem;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    padding: 0.25rem 0.6rem;
+    text-transform: uppercase;
+  }
+  .step h2 {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.2rem;
+    font-weight: 400;
+    margin-top: 0.75rem;
+    margin-bottom: 0.9rem;
+    color: var(--cream);
+  }
+  .step p, .step li {
+    font-size: 0.72rem;
+    color: var(--muted);
+    line-height: 1.8;
+    letter-spacing: 0.03em;
+  }
+  .step ol {
+    padding-left: 1.25rem;
+    margin-top: 0.5rem;
+  }
+  .step li { margin-bottom: 0.25rem; }
+  .step li strong { color: var(--cream); }
+
+  /* bookmarklet button */
+  .bm-row {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin: 1.25rem 0 0.75rem;
+    flex-wrap: wrap;
+  }
+  #bookmarklet-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: linear-gradient(135deg, var(--amber) 0%, #a06020 100%);
+    color: var(--bg);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-decoration: none;
+    padding: 0.65rem 1.1rem;
+    border-radius: 2px;
+    cursor: grab;
+    transition: opacity 0.15s;
+    user-select: none;
+    white-space: nowrap;
+  }
+  #bookmarklet-link:hover { opacity: 0.85; }
+  #bookmarklet-link:active { cursor: grabbing; }
+  .bm-hint {
+    font-size: 0.65rem;
+    color: var(--muted);
+    letter-spacing: 0.05em;
+    font-style: italic;
+  }
+
+  /* ── drop zone ── */
+  .drop-zone {
+    border: 1px dashed var(--amber-dim);
+    border-radius: 2px;
+    padding: 2.25rem;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+    position: relative;
+    margin-top: 1rem;
+  }
+  .drop-zone.dragging {
+    border-color: var(--amber);
+    background: rgba(200,130,42,0.06);
+  }
+  .drop-zone-icon {
+    font-size: 1.8rem;
+    margin-bottom: 0.6rem;
+    opacity: 0.5;
+  }
+  .drop-zone p {
+    font-size: 0.68rem;
+    color: var(--muted);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .drop-zone p span {
+    color: var(--amber);
+    text-decoration: underline;
+    cursor: pointer;
+  }
+  #file-input { display: none; }
+
+  /* ── status bar ── */
+  #status {
+    font-size: 0.65rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 0.5rem 0;
+    color: var(--muted);
+    min-height: 1.5rem;
+    transition: color 0.3s;
+  }
+  #status.ok  { color: var(--amber); }
+  #status.err { color: var(--red); }
+
+  /* ── picker section ── */
+  #picker-section { display: none; }
+
+  .roll-btn {
+    display: block;
+    width: 100%;
+    background: transparent;
+    border: 1px solid var(--amber);
+    color: var(--amber);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.9rem;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    padding: 1.25rem;
+    cursor: pointer;
+    border-radius: 2px;
+    transition: background 0.15s, color 0.15s;
+    margin-bottom: 1.75rem;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .roll-btn:hover, .roll-btn:active {
+    background: var(--amber);
+    color: var(--bg);
+  }
+
+  /* ── pin card ── */
+  #pin-card {
+    display: none;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+    animation: fadeUp 0.35s ease;
+  }
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .pin-img-wrap {
+    position: relative;
+    background: #0a0908;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 200px;
+    max-height: 560px;
+    overflow: hidden;
+  }
+  .pin-img-wrap::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to bottom, transparent 60%, rgba(12,11,9,0.7) 100%);
+    pointer-events: none;
+  }
+  #pin-img {
+    width: 100%;
+    height: auto;
+    max-height: 560px;
+    object-fit: contain;
+    display: block;
+    transition: opacity 0.3s;
+  }
+
+  .pin-meta {
+    padding: 1.25rem 1.5rem 1.4rem;
+    border-top: 1px solid var(--border);
+  }
+  .pin-counter {
+    font-size: 0.58rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--amber-dim);
+    margin-bottom: 0.5rem;
+  }
+  #pin-desc {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.05rem;
+    font-style: italic;
+    color: var(--cream);
+    line-height: 1.6;
+    margin-bottom: 1rem;
+    min-height: 1.6rem;
+  }
+  .pin-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.65rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--amber);
+    text-decoration: none;
+    border-bottom: 1px solid var(--amber-dim);
+    padding-bottom: 1px;
+    transition: color 0.15s, border-color 0.15s;
+  }
+  .pin-link:hover {
+    color: var(--cream);
+    border-color: var(--cream);
+  }
+
+  /* ── film strip decoration ── */
+  .filmstrip {
+    display: flex;
+    gap: 4px;
+    margin: 2rem 0 0;
+    opacity: 0.18;
+    pointer-events: none;
+  }
+  .filmstrip-hole {
+    width: 18px; height: 12px;
+    border: 1px solid var(--cream);
+    border-radius: 2px;
+    flex-shrink: 0;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="logo-row">
+      <span class="logo-icon">◼◼◼</span>
+      <h1>Pin <em>Picker</em></h1>
+    </div>
+    <p class="subtitle">sketch-subjects · ca_martin · pinterest</p>
+  </header>
+
+  <!-- STEP 1: Bookmarklet -->
+  <div class="step" id="step1">
+    <div class="step-num">Step 01 — Scrape</div>
+    <h2>Install the board scraper</h2>
+    <p>Drag the button below to your browser's bookmarks bar. Then go to your Pinterest board and use it to harvest all your pins.</p>
+
+    <div class="bm-row">
+      <a id="bookmarklet-link" href="#">📌 Pin Scraper</a>
+      <span class="bm-hint">← drag this to your bookmarks bar</span>
+    </div>
+
+    <ol>
+      <li>Go to <strong>pinterest.com/ca_martin/sketch-subjects/</strong></li>
+      <li>Click <strong>Pin Scraper</strong> in your bookmarks bar — you'll see a confirmation alert</li>
+      <li>Scroll slowly all the way down until all pins have loaded</li>
+      <li>Click <strong>Pin Scraper</strong> again — it downloads <code>pins.json</code></li>
+    </ol>
+  </div>
+
+  <!-- STEP 2: Load + Pick -->
+  <div class="step" id="step2">
+    <div class="step-num">Step 02 — Pick</div>
+    <h2>Load your pins file</h2>
+
+    <div id="auto-load-msg" style="display:none;">
+      <p style="font-size:0.8rem;color:var(--muted);line-height:1.8;">
+        Detected <code style="background:var(--surface);border:1px solid var(--border);color:var(--amber);padding:1px 5px;">pins.json</code> — loading automatically...
+      </p>
+    </div>
+
+    <div class="drop-zone" id="drop-zone">
+      <div class="drop-zone-icon">⬡</div>
+      <p>Drop <strong>pins.json</strong> here</p>
+      <p style="margin-top:0.35rem">or <span id="browse-btn">browse for file</span></p>
+    </div>
+    <input type="file" id="file-input" accept=".json">
+    <div id="status"></div>
+  </div>
+
+  <!-- PICKER -->
+  <div id="picker-section">
+    <button class="roll-btn" id="roll-btn">⟳ &nbsp; Random Pin</button>
+
+    <div id="pin-card">
+      <div class="pin-img-wrap">
+        <img id="pin-img" src="" alt="">
+      </div>
+      <div class="pin-meta">
+        <div class="pin-counter" id="pin-counter"></div>
+        <div id="pin-desc"></div>
+        <a id="pin-link" class="pin-link" href="#" target="_blank" rel="noopener">
+          ↗ &nbsp;view on pinterest
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <div class="filmstrip" id="filmstrip" style="display:none;">
+  </div>
+
+</div>
+
+<script>
+// ── Build bookmarklet ────────────────────────────────────────────────────────
+const scraperFn = function(){
+  if(window.__pinScraper){
+    var pins=Array.from(window.__pinScraper.pins.values());
+    if(pins.length===0){alert('No pins found yet — make sure you scrolled the board!');return;}
+    var json=JSON.stringify(pins,null,2);
+    var blob=new Blob([json],{type:'application/json'});
+    var a=document.createElement('a');
+    a.href=URL.createObjectURL(blob);
+    a.download='pins.json';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.__pinScraper.obs.disconnect();
+    delete window.__pinScraper;
+    alert('Downloaded '+pins.length+' pins! Load pins.json into the Pin Picker tool.');
+  } else {
+    var pins=new Map();
+    function collect(){
+      document.querySelectorAll('a[href*="/pin/"]').forEach(function(el){
+        var m=(el.getAttribute('href')||'').match(/\/pin\/(\d+)/);
+        if(!m)return;
+        var id=m[1];
+        if(pins.has(id))return;
+        var img=el.querySelector('img');
+        if(!img)return;
+        var src=img.src||img.getAttribute('src')||'';
+        if(!src.includes('pinimg.com'))return;
+        var hires=src.replace(/\/\d+x\//,'/736x/');
+        var desc=img.alt||img.getAttribute('aria-label')||'';
+        pins.set(id,{id:id,url:'https://www.pinterest.com'+el.getAttribute('href'),image:hires,description:desc});
+      });
+    }
+    collect();
+    var obs=new MutationObserver(collect);
+    obs.observe(document.body,{childList:true,subtree:true});
+    window.__pinScraper={pins:pins,obs:obs};
+    alert('Scraper running! ('+pins.size+' pins so far)\n\nScroll slowly through ALL pins, then click Pin Scraper again to download.');
+  }
+};
+
+const code = 'javascript:(' + scraperFn.toString() + ')();';
+document.getElementById('bookmarklet-link').href = code;
+
+// ── Pin state ─────────────────────────────────────────────────────────────────
+let pins = [];
+let rollCount = 0;
+
+// ── Auto-fetch pins.json if served from a server ──────────────────────────────
+async function tryAutoLoad() {
+  // Only attempt if we're on a real server (not file://)
+  if(location.protocol === 'file:') return false;
+  try {
+    const r = await fetch('pins.json', { signal: AbortSignal.timeout(4000) });
+    if(!r.ok) return false;
+    const data = await r.json();
+    if(!Array.isArray(data) || data.length === 0) return false;
+    const valid = data.filter(p => p.image && p.url);
+    if(!valid.length) return false;
+    // success — hide drop zone, show auto-load message
+    pins = valid;
+    document.getElementById('drop-zone').style.display = 'none';
+    document.getElementById('auto-load-msg').style.display = 'block';
+    setStatus(`${pins.length} pins loaded automatically`, 'ok');
+    buildFilmstrip(pins.length);
+    document.getElementById('picker-section').style.display = 'block';
+    // hide step 1 instructions on mobile — they're not needed
+    if(window.innerWidth < 600) {
+      document.getElementById('step1').style.display = 'none';
+    }
+    return true;
+  } catch(e) {
+    return false;
+  }
+}
+
+// ── File loading (fallback for local use) ─────────────────────────────────────
+const dropZone  = document.getElementById('drop-zone');
+const fileInput = document.getElementById('file-input');
+const status    = document.getElementById('status');
+
+document.getElementById('browse-btn').addEventListener('click', () => fileInput.click());
+fileInput.addEventListener('change', e => loadFile(e.target.files[0]));
+
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragging'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragging'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropZone.classList.remove('dragging');
+  const f = e.dataTransfer.files[0];
+  if(f) loadFile(f);
+});
+
+function loadFile(file) {
+  if(!file || !file.name.endsWith('.json')) {
+    setStatus('Please drop a .json file', 'err'); return;
+  }
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const data = JSON.parse(e.target.result);
+      if(!Array.isArray(data) || data.length === 0) throw new Error('Empty or invalid');
+      pins = data.filter(p => p.image && p.url);
+      if(pins.length === 0) throw new Error('No valid pins found');
+      setStatus(`${pins.length} pins loaded from ${file.name}`, 'ok');
+      buildFilmstrip(pins.length);
+      document.getElementById('picker-section').style.display = 'block';
+      document.getElementById('step2').querySelector('.drop-zone').style.borderColor = 'var(--amber)';
+    } catch(err) {
+      setStatus('Could not parse pins.json — ' + err.message, 'err');
+    }
+  };
+  reader.readAsText(file);
+}
+
+function setStatus(msg, cls) {
+  status.textContent = msg;
+  status.className = cls || '';
+}
+
+// ── Picker ────────────────────────────────────────────────────────────────────
+document.getElementById('roll-btn').addEventListener('click', pickRandom);
+
+function pickRandom() {
+  if(pins.length === 0) return;
+  rollCount++;
+  const pin = pins[Math.floor(Math.random() * pins.length)];
+  const card = document.getElementById('pin-card');
+  const img  = document.getElementById('pin-img');
+
+  card.style.display = 'none';
+  void card.offsetWidth;
+  card.style.display = 'block';
+
+  img.style.opacity = '0';
+  img.onload = () => { img.style.opacity = '1'; };
+  img.onerror = () => {
+    img.src = pin.image.replace('/736x/', '/474x/');
+    img.style.opacity = '1';
+  };
+  img.src = pin.image;
+  img.alt = pin.description || 'Pinterest pin';
+
+  document.getElementById('pin-desc').textContent = pin.description || '—';
+  document.getElementById('pin-link').href = pin.url;
+  document.getElementById('pin-counter').textContent =
+    `Roll #${rollCount}  ·  pin ${pins.indexOf(pin)+1} of ${pins.length}`;
+}
+
+// ── Filmstrip ─────────────────────────────────────────────────────────────────
+function buildFilmstrip(count) {
+  const fs = document.getElementById('filmstrip');
+  fs.style.display = 'flex';
+  const holes = Math.min(count, 48);
+  fs.innerHTML = '';
+  for(let i=0;i<holes;i++){
+    const d = document.createElement('div');
+    d.className = 'filmstrip-hole';
+    fs.appendChild(d);
+  }
+}
+
+// ── Init — try auto-load first ────────────────────────────────────────────────
+tryAutoLoad();
+</script>
+</body>
+</html>
