@@ -538,7 +538,9 @@ document.getElementById('roll-btn').addEventListener('click', pickRandom);
 function pickRandom() {
   if(pins.length === 0) return;
   rollCount++;
-  const pin = pins[Math.floor(Math.random() * pins.length)];
+  //const pin = pins[Math.floor(Math.random() * pins.length)];
+  const skew = 0.3; // lower = more skewed toward high end (try 0.3–0.7)
+  const pin = pins[Math.floor(Math.pow(Math.random(), skew) * pins.length)];
   const card = document.getElementById('pin-card');
   const img  = document.getElementById('pin-img');
 
